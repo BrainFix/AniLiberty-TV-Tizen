@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://local.example/aniliberty7r4m9w" version="1.0.0" viewmodes="maximized">
+  <name>AniLiberty TV</name><icon src="icon.png"/><content src="index.html"/><access origin="*" subdomains="true"/>
+  <tizen:application id="anil7r4m9w.AniLibertyTV" package="anil7r4m9w" required_version="6.0"/>
+  <tizen:profile name="tv-samsung"/>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+  <tizen:setting pointing-device-support="disable"/>
+</widget>
