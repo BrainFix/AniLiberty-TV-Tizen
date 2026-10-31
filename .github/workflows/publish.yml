@@ -1,0 +1,58 @@
+name: Build and publish WGT
+on:
+  push:
+    branches: [main]
+    paths: [config.xml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.repository == 'BrainFix/AniLiberty-TV-Tizen'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build and verify the unsigned WGT
+        run: |
+          python3 scripts/собрать.py
+          python3 scripts/проверить.py
+      - name: Commit the verified WGT
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python3 -c 'import xml.etree.ElementTree as E; print(E.parse("config.xml").getroot().attrib["version"])')"
+          TAG="v$VERSION"
+          WGT="AniLiberty-TV-$VERSION.wgt"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "wgt=$WGT" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f --ignore-unmatch 'AniLiberty-TV-1.0.0.wgt'
+          git add -- "$WGT"
+          if ! git diff --cached --quiet; then
+            git commit -m "build: add verified $WGT"
+            git push origin HEAD:main
+          fi
+          echo "target=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Publish GitHub Release with WGT asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.package.outputs.tag }}
+          VERSION: ${{ steps.package.outputs.version }}
+          WGT: ${{ steps.package.outputs.wgt }}
+          TARGET: ${{ steps.package.outputs.target }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping publication"
+            exit 0
+          fi
+          gh release create "$TAG" "./$WGT" \
+            --target "$TARGET" \
+            --title "AniLiberty TV $VERSION" \
+            --notes-file RELEASE_NOTES.md \
+            --latest
