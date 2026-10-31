@@ -1,8 +1,5 @@
 name: Build and publish WGT
 on:
-  push:
-    branches: [main]
-    paths: [config.xml]
   workflow_dispatch:
 permissions:
   contents: write
