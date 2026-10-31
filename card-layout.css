@@ -1,0 +1,51 @@
+#grid .title-card, .episode-tile {
+  position: relative;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#grid .title-card > .title-card-art, .episode-tile > .episode-thumb {
+  position: absolute;
+  display: block;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+#grid .title-card > .title-card-art { bottom: 3.125rem; }
+.episode-tile > .episode-thumb { bottom: 3rem; }
+#grid .title-card > .title-card-footer, .episode-tile > .episode-footer {
+  position: absolute;
+  display: flex;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto !important;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+}
+#grid .title-card > .title-card-footer { height: 3.125rem; min-height: 3.125rem; }
+.episode-tile > .episode-footer { height: 3rem; min-height: 3rem; }
+#grid .title-card-art > img.artwork-image, .episode-thumb > img.artwork-image {
+  position: absolute !important;
+  display: block;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  object-fit: cover !important;
+  object-position: center center;
+  margin: 0 !important;
+  padding: 0 !important;
+}

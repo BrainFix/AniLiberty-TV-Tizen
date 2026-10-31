@@ -1298,7 +1298,7 @@ function wireAccountNavigation(){
   if(i+1<items.length)b.setAttribute('data-nav-down',focusId(items[i+1]));
  });
 }
-function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.0';}
+function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.1';}
 
 
 function showAccount(preferredFocusId){
@@ -1505,6 +1505,37 @@ function openRelease(r,viaRelated){
   },function(err){if(rid!==releaseLoadToken||!releaseLoading)return;errors.push('статусы: '+err);statusDone=true;finish();});
  }
 }
+/* Restore navigation after card geometry has been laid out. */
+var returnToTitleSerial=0;
+function restoreTitleOriginAfterLayout(from){
+ var serial=++returnToTitleSerial;
+ function applyReturn(){
+  /* Do not steal focus if the user has navigated elsewhere meanwhile. */
+  if(serial!==returnToTitleSerial||screenName!==from.screen||grid.hidden||playing||releaseLoading)return;
+  var main=document.getElementById('scrollMain');
+  var matches=Array.prototype.filter.call(document.querySelectorAll('button'),function(b){
+   return focusId(b)===from.focus&&!b.disabled&&b.offsetWidth>0&&b.offsetHeight>0;
+  });
+  var target=matches[0]||null;
+  if(!target){
+   /* If the release disappeared (for example, the last favorite was removed),
+      focus a remaining title; when the section is empty, use its header tab. */
+   target=grid.querySelector('.title-card')||document.getElementById(activeNavId(from.screen));
+  }
+  if(!target)return;
+  if(main)scrollFocusTo(main,main.contains(target)?from.scroll:0,true);
+  focusAndReveal(target,true);
+  /* A second frame accounts for late browser focus scrolling on older Tizen.
+     Do not override an intentional subsequent focus change. */
+  if(main&&main.contains(target))requestAnimationFrame(function(){
+   if(serial===returnToTitleSerial&&screenName===from.screen&&document.activeElement===target){
+    ensureFocusVisible(target,true);
+   }
+  });
+ }
+ /* Restore after the layout frame and the subsequent geometry update. */
+ requestAnimationFrame(function(){requestAnimationFrame(applyReturn);});
+}
 function backFromRelease(){
  if(relatedTrail.length){
   var frame=relatedTrail[relatedTrail.length-1];
@@ -1519,12 +1550,7 @@ function backFromRelease(){
  else if(from.screen==='favorites'){clear();setScreen('favorites');renderFavorites(false);
   refreshSurfaceTimecodes();refreshFavoriteIds(function(err){if(err)logError('Избранное: возврат',err);});refreshFavoriteTitles();}
  else {latest();return;}
- var main=document.getElementById('scrollMain');
- var target=Array.prototype.find.call(document.querySelectorAll('button'),function(b){return focusId(b)===from.focus&&!b.disabled;});
-
-
- if(main)scrollFocusTo(main,from.scroll,true);
- if(target)focusAndReveal(target,true);
+ restoreTitleOriginAfterLayout(from);
 }
 function episodeList(r){var x=r.episodes||{};return arr(x).length?arr(x):arr(x.list).length?arr(x.list):Array.isArray(x)?x:Object.keys(x).filter(function(k){return /^\d+$/.test(k);}).map(function(k){return x[k];});}
 function urls(ep){var h=ep.hls_1080||ep.hls_720||ep.hls_480||ep.hls||ep.video||ep.sources||{};var candidates=[h,ep.hls_1080,ep.hls_720,ep.hls_480,ep.url,ep.src];if(typeof h==='object')candidates.unshift(h.fhd,h.hd,h.sd,h.url,h.src,h[1080],h[720]);return candidates.map(function(v){return typeof v==='string'?v:v&&(v.src||v.url);}).filter(Boolean);}
