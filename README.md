@@ -35,17 +35,9 @@
 
 ## Установка
 
-Рекомендуемый способ — [Apps2Samsung](https://apps2samsung.com/) **версии 2.8.3**.
+Скачайте файл [`AniLiberty-TV-1.0.1.wgt`](https://github.com/BrainFix/AniLiberty-TV-Tizen/releases/download/v1.0.1/AniLiberty-TV-1.0.1.wgt) из [GitHub Releases](https://github.com/BrainFix/AniLiberty-TV-Tizen/releases).
 
-1. Откройте файл [`AniLiberty-TV-1.0.1.wgt`](https://github.com/BrainFix/AniLiberty-TV-Tizen/releases/download/v1.0.1/AniLiberty-TV-1.0.1.wgt) в репозитории и скачайте его.
-2. Установите и откройте [Apps2Samsung v2.8.3](https://github.com/Apps2Samsung/Apps2Samsung/releases/tag/v2.8.3) на компьютере или поддерживаемом устройстве.
-3. Подключите телевизор и устройство с Apps2Samsung к одной локальной сети. Включите на телевизоре режим разработчика, следуя [инструкции Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung/wiki/FAQ).
-4. В Apps2Samsung выберите телевизор и установку собственного файла приложения (`.wgt`). Укажите скачанный файл AniLiberty TV.
-5. По завершении установки запустите AniLiberty TV на телевизоре.
-
-Общее руководство по установке собственного `.wgt` приведено в [README Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung); порядок включения режима разработчика — в [FAQ Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung/wiki/FAQ).
-
-**Также можно использовать любой другой удобный способ установки файлов `.wgt` на телевизоры Samsung с Tizen.**
+Для установки рекомендуется [Apps2Samsung v2.8.3](https://github.com/Apps2Samsung/Apps2Samsung/releases/tag/v2.8.3). Допускаются и другие способы установки WGT на телевизоры Samsung.
 
 ## Управление
 
