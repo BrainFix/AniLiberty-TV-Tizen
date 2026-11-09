@@ -37,7 +37,7 @@
 
 Скачайте файл [`AniLiberty-TV-1.0.1.wgt`](https://github.com/BrainFix/AniLiberty-TV-Tizen/releases/download/v1.0.1/AniLiberty-TV-1.0.1.wgt) из [GitHub Releases](https://github.com/BrainFix/AniLiberty-TV-Tizen/releases).
 
-Для установки рекомендуется [Apps2Samsung v2.8.3](https://github.com/Apps2Samsung/Apps2Samsung/releases/tag/v2.8.3). Допускаются и другие способы установки WGT на телевизоры Samsung.
+Для установки рекомендуется использовать [актуальную версию Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung/releases/latest). Допускаются и другие способы установки WGT на телевизоры Samsung.
 
 ## Управление
 
