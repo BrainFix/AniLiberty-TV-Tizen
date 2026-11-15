@@ -100,7 +100,7 @@ function endAccountSession(){
  token='';try{localStorage.removeItem(TOKEN_KEY);}catch(e){}
 }
 
-var CACHE_KEY='al_tv_history_cache', historyLoadStarted=0,historyLastPaint=0,historyFetchId=0,historyLoading=false,historyUserRequested=false;
+var CACHE_KEY='al_tv_history_cache', historyLoadStarted=0,historyLastPaint=0,historyFetchId=0,historyLoading=false;
 var freshTimecodes=false,historyFetchStarted=false,historyRepaintTimer=null,historyStaleCount=0,freshHistoryComplete=false,serverTimecodesFetchedAt=0;
 
 var accountReadSerial=0,remoteVerifyTimer=null,remoteVerifyCount=0,remoteLastTimecodesCount=0,remoteLastVerifiedAt=0,remoteResponseSerial=0;
@@ -707,7 +707,7 @@ function dbOpen(cb){if(!window.indexedDB){logError('Кеш','IndexedDB недо�
 function cacheRead(cb){var started=Date.now();dbOpen(function(db){if(!db){cb(null);return;}try{var tx=db.transaction(CACHE_STORE,'readonly'),req=tx.objectStore(CACHE_STORE).get('history');req.onsuccess=function(){var x=req.result;cacheStats.readMs=Date.now()-started;cacheStats.source=x&&x.account===token.slice(-16)?'IndexedDB':'нет кеша';cacheStats.records=x&&x.history&&x.account===token.slice(-16)?x.history.length:0;cacheStats.savedAt=x&&x.savedAt||0;cb(x&&x.account===token.slice(-16)?x:null);};req.onerror=function(){logError('Кеш','Ошибка чтения IndexedDB');cb(null);};tx.oncomplete=function(){db.close();};}catch(e){logError('Кеш',e);db.close();cb(null);}});}
 function cacheWrite(){var snapshot={account:token.slice(-16),history:serverHistory,savedAt:Date.now(),complete:historyComplete};dbOpen(function(db){if(!db)return;try{var tx=db.transaction(CACHE_STORE,'readwrite');tx.objectStore(CACHE_STORE).put(snapshot,'history');tx.onerror=function(){cacheStats.write='ошибка';logError('Кеш',tx.error);};tx.oncomplete=function(){cacheStats.write='успешно';cacheStats.records=snapshot.history.length;cacheStats.savedAt=snapshot.savedAt;db.close();};}catch(e){logError('Кеш',e);db.close();}});}
 function cacheClear(){try{localStorage.removeItem(CACHE_KEY);}catch(e){}dbOpen(function(db){if(!db)return;var tx=db.transaction(CACHE_STORE,'readwrite');tx.objectStore(CACHE_STORE).delete('history');tx.oncomplete=function(){db.close();};});}
-function updateIndicator(){var el=document.getElementById('syncIndicator');if(!el)return;if(!token){el.textContent='Без аккаунта · прогресс не сохраняется';el.className='ready';updateSyncStatusUi();return;}var text='';if(historyLoading)text='История: '+serverHistory.length+' записей';else if(!historyReady)text='История: ожидание';else if(checkRunning)text='Проверка серий: '+checkDone+'/'+checkTotal+(checkFailed?' · ошибок '+checkFailed:'');else if(checkFailed)text='Проверено частично: '+checkDone+'/'+checkTotal;else if(checkTotal)text='✓ Список готов · '+checkTotal;else text='История готова';el.textContent=text+' · '+syncSummary()+' · '+favoriteSyncSummary();el.className=checkFailed||syncError||favoriteReadError||favoriteSyncError?'warning':checkRunning||historyLoading||syncInFlight||favoriteReadPending||favoriteSyncBusy?'busy':'ready';var accountLine=document.getElementById('accountSyncStatus');if(accountLine)accountLine.textContent=syncSummary()+(syncError?' · '+syncError:'')+' · '+favoriteSyncSummary()+(favoriteReadError?' · '+favoriteReadError:'');updateHeaderNotice();updateSyncStatusUi();}
+function updateIndicator(){var el=document.getElementById('syncIndicator');if(!el)return;if(!token){el.textContent='Без аккаунта · прогресс не сохраняется';el.className='ready';updateSyncStatusUi();return;}var text='';if(historyLoading)text='История: '+serverHistory.length+' записей';else if(!historyReady)text='История: ожидание';else if(checkRunning)text='Проверка серий: '+checkDone+'/'+checkTotal+(checkFailed?' · ошибок '+checkFailed:'');else if(checkFailed)text='Проверено частично: '+checkDone+'/'+checkTotal;else if(checkTotal)text='✓ Список готов · '+checkTotal;else text='История готова';el.textContent=text+' · '+syncSummary()+' · '+favoriteSyncSummary();el.className=checkFailed||syncError||favoriteReadError||favoriteSyncError?'warning':checkRunning||historyLoading||syncInFlight||favoriteReadPending||favoriteSyncBusy?'busy':'ready';updateHeaderNotice();updateSyncStatusUi();}
 
 
 function beginAvailability(){if(!historyReady||!serverHistory.length||!token)return;var generation=++checkGeneration;checkQueue=groupedHistory().map(function(g){return g;});checkTotal=checkQueue.length;checkDone=0;checkFailed=0;checkBusy=0;checkRunning=!!checkTotal;updateIndicator();pumpAvailability(generation);}
@@ -1257,7 +1257,7 @@ function scheduleRemoteVerification(loadId){
 
  remoteVerifyTimer=setTimeout(function(){verifyRemoteTimecodes(loadId,1);remoteVerifyTimer=setTimeout(function(){verifyRemoteTimecodes(loadId,2);remoteVerifyTimer=null;},6500);},3000);
 }
-function loadAccount(background){historyUserRequested=!background;if(!token){showAccount();return;}if(historyLoading)return;clearTimeout(remoteVerifyTimer);remoteVerifyTimer=null;historyLoading=true;historyLoadStarted=Date.now();updateIndicator();historyLastPaint=0;var loadId=++historyFetchId;freshHistoryComplete=false;if(!background)msg('Обновляю историю с сайта…');
+function loadAccount(background){if(!token){showAccount();return;}if(historyLoading)return;clearTimeout(remoteVerifyTimer);remoteVerifyTimer=null;historyLoading=true;historyLoadStarted=Date.now();updateIndicator();historyLastPaint=0;var loadId=++historyFetchId;freshHistoryComplete=false;if(!background)msg('Обновляю историю с сайта…');
  var url=freshAccountPath('/accounts/users/me/views/timecodes'),readSerial=accountReadSerial;
  authRequest(url,'GET',null,function(codes){
   if(loadId!==historyFetchId)return;
@@ -1304,7 +1304,6 @@ function finishHistory(all,complete,warning,loadId){
  if(complete){cacheWrite();beginAvailability();}
  flushMutations();
  if(screenName==='history'&&!grid.hidden)showServerContinue(historyMode,false,true);
- else if(historyUserRequested)showServerContinue('continue',true);
  markManualHistoryResult(complete);
  if(!complete)msg('История сайта получена частично ('+all.length+'): '+(warning||'неполная загрузка')+'. Сохранён предыдущий полный список.');
 }
@@ -1471,6 +1470,7 @@ function showServerContinue(mode,reset,preserve,focusNewAt){
  });}
  var wanted=[],totalShown=0,limit=historyOffset+historyPageSize,newFocus=null;
  sections.forEach(function(section,index){
+  if(!section[1].length||totalShown>=limit)return;
   var heading=reusedHeadings[String(index)]||node('h2','history-heading');
   heading.setAttribute('data-history-heading',String(index));
   var headingText=section[0]+' · '+section[1].length;
@@ -1486,6 +1486,14 @@ function showServerContinue(mode,reset,preserve,focusNewAt){
   });
  });
  var visibleCount=sections.reduce(function(n,section){return n+section[1].length;},0);
+ if(!visibleCount){
+  var emptyText=historyMode==='continue'?'Пока нечего продолжать':'История просмотров пока пуста';
+  if(historyLoading)emptyText='Загружаем историю просмотров…';
+  else if(!historyComplete&&!freshHistoryComplete){
+   emptyText=syncValidationErrors.history||startupSyncError?'Не удалось загрузить историю просмотров':'История ещё не загружена';
+  }
+  wanted.push(node('h2','history-heading',emptyText));
+ }
  if(totalShown<visibleCount){
   var more=reusedMore||assignFocus(node('button','history-more'),'history-more');
   var label='Показать ещё ('+(visibleCount-totalShown)+')';if(more.textContent!==label)more.textContent=label;
@@ -1529,7 +1537,7 @@ function wireAccountNavigation(){
   if(i+1<items.length)b.setAttribute('data-nav-down',focusId(items[i+1]));
  });
 }
-function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.2';}
+function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.3';}
 
 
 function showAccount(preferredFocusId){
@@ -1549,8 +1557,6 @@ function showAccount(preferredFocusId){
  accountLayout.appendChild(accountLeft);accountLayout.appendChild(accountRight);detail.appendChild(accountLayout);
  if(token){
   accountLeft.appendChild(node('p','account-intro','Вы вошли в аккаунт. Здесь можно обновить историю просмотров и управлять данными на телевизоре.'));
-  var accountSyncLine=node('p','account-status',syncSummary()+(syncError?' · '+syncError:'')+' · '+favoriteSyncSummary());
-  accountSyncLine.id='accountSyncStatus';accountLeft.appendChild(accountSyncLine);
   accountGroup('Синхронизация','Получить актуальную историю просмотров с AniLiberty.',[
    ['Загрузить историю с сайта',function(){loadAccount(false);},'account-refresh']]);
   accountGroup('Данные на телевизоре','Удаляет локальную историю и ожидающие отправки изменения. Данные на сайте не удаляются.',[
@@ -1679,7 +1685,19 @@ function showRelated(ctx,selected,scroll,fromChild){
  var main=document.getElementById('scrollMain');
  if(main)scrollFocusTo(main,scroll||0,true);
  var wanted=selected?'related-'+selected:'related-'+relatedId(relatedScreen.items[0]);
- restoreFocus(wanted);
+ var cards=Array.prototype.slice.call(grid.querySelectorAll('.title-card'));
+ var target=cards.filter(function(b){return focusId(b)===wanted;})[0]||cards[0];
+ if(target){
+  // Do not use restoreFocus(): its fallback may select a header navigation button.
+  focusAndReveal(target,true);
+  var screen=relatedScreen;
+  requestAnimationFrame(function(){
+   // Reassert only when focus escaped the cards during this render. Do not steal
+   // focus from another related card or from a screen opened in the meantime.
+   if(screenName==='related'&&relatedScreen===screen&&grid.contains(target)&&
+      !grid.contains(document.activeElement))focusAndReveal(target,true);
+  });
+ }
  msg('Связанные · '+relatedScreen.items.length+' тайтлов');
  refreshRelatedStatuses();
 }

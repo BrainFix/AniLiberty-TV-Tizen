@@ -367,9 +367,8 @@ main#scrollMain {
 .episode-tile.episode-state-complete { background: #29483e; color: #e0f6e9; }
 
 
-#detail .account-intro, #detail .account-status, #detail .account-section, #detail > .app-version { max-width: 50rem; }
+#detail .account-intro, #detail .account-section, #detail > .app-version { max-width: 50rem; }
 #detail .account-intro { margin: 0 0 0.75rem; font-size: 1.375rem; line-height: 1.4; }
-#detail .account-status { margin: 0.75rem 0 1.125rem; color: #a8b8d5; font-size: 1.125rem; line-height: 1.4; }
 .account-section { margin: 1.125rem 0 1.375rem; }
 .account-heading { margin: 0 0 0.375rem; color: #b6c5e7; font-size: 1.5rem; }
 #detail .account-note { margin: 0 0 0.875rem; color: #aebbd3; font-size: 1.125rem; line-height: 1.35; }
