@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - config.xml
+      - scripts/проверить.py
 permissions:
   contents: write
 jobs:
