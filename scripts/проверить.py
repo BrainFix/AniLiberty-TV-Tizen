@@ -17,7 +17,7 @@ sources={
     "sync-icons/receiving.svg", "sync-icons/sending.svg", "sync-icons/synced.svg",
     "sync-icons/waiting.svg",
 }
-if version!="1.0.5":
+if version!="1.0.6":
     raise SystemExit("Неверная версия: ожидается 1.0.5")
 if xml.attrib.get("id")!="http://local.example/aniliberty7r4m9w":
     raise SystemExit("Неверный Widget ID")
