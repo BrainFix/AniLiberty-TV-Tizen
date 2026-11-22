@@ -745,7 +745,7 @@ function startBackgroundHistory(){if(!token||historyLoading)return;var generatio
 var historyMode='continue',historyOffset=0,historyPageSize=49,historyComplete=false;
 var resumeFailed=false, resumePending=false, resumeTarget=0, resumeAttempts=0, resumeStarted=0, resumeConfirmed=false, resumeSeekInFlight=false, resumeLastSeek=0, resumeLastError="";
 function hideOverlay(){overlayVisible=false;clearTimeout(overlayTimer);overlayTimer=null;document.body.classList.remove('overlay-visible');}
-function showOverlay(){if(!playing)return;overlayVisible=true;document.body.classList.add('overlay-visible');clearTimeout(overlayTimer);overlayTimer=setTimeout(hideOverlay,5000);}
+function showOverlay(){if(!playing)return;overlayVisible=true;document.body.classList.add('overlay-visible');balancePlayerTitle();clearTimeout(overlayTimer);overlayTimer=setTimeout(hideOverlay,5000);}
 function av(){return window.webapis&&webapis.avplay;}
 function stamp(ms){if(!isFinite(ms)||ms<0)return '00:00';var s=Math.floor(ms/1000);return (Math.floor(s/3600)?Math.floor(s/3600)+':':'')+('0'+Math.floor(s%3600/60)).slice(-2)+':'+('0'+s%60).slice(-2);}
 function position(){try{return video?video.currentTime*1000:av()?webapis.avplay.getCurrentTime():0;}catch(e){return 0;}}
@@ -798,7 +798,7 @@ function markEpisodeWatched(reason){
 
 function renderPlaybackStatus(){
  var text=seekPreview!==null&&seekHoldDirection
-  ?'ПЕРЕМОТКА '+(seekHoldDirection>0?'▶▶':'◀◀')+' · '+seekStepSeconds+' с'
+  ?'ПЕРЕМОТКА'
   :paused?'ПАУЗА':'ВОСПРОИЗВЕДЕНИЕ';
  var label=document.getElementById('pauseState');
  if(label.textContent!==text)label.textContent=text;
@@ -946,6 +946,7 @@ function enhanceTitleArtwork(id,release){
 window.addEventListener('resize',function(){
  Array.prototype.forEach.call(document.querySelectorAll('.title-card-art,.episode-thumb'),function(art){if(art._layoutArtwork)art._layoutArtwork();});
  updateDescriptionPreview();
+ if(playing)balancePlayerTitle();
 });
 function node(tag,cl,txt){var e=document.createElement(tag);if(cl)e.className=cl;if(txt!=null)e.textContent=txt;return e;}
 function clear(){cancelFocusScroll();rememberFocus();grid.innerHTML='';visibleTitleCards=Object.create(null);titleImagePriority=0;titleRequestQueue.forEach(function(r){delete titleRequestPending[String(r.id)];});titleRequestQueue=[];detail.innerHTML='';detail.hidden=true;grid.hidden=false;}
@@ -1538,7 +1539,7 @@ function wireAccountNavigation(){
   if(i+1<items.length)b.setAttribute('data-nav-down',focusId(items[i+1]));
  });
 }
-function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.3';}
+function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.5';}
 
 
 function showAccount(preferredFocusId){
@@ -2065,6 +2066,96 @@ function releaseCardOK(e){
  return true;
 }
 function cancelCardOK(){if(okHold){clearTimeout(okHold.timer);okHold=null;}}
+// Keep title and episode number separate from the optional episode name.
+// A separate block contains the complete episode name when provided by AniLiberty.
+function episodeNameForPlayer(ep){
+ if(!ep)return '';
+ var candidates=[ep.name,ep.name_russian,ep.name_english];
+ for(var i=0;i<candidates.length;i++){
+  var name=candidates[i];
+  if(name&&typeof name==='object')name=name.main||name.russian||name.english||name.en||name.ru||'';
+  if(name!=null){
+   name=String(name).replace(/\s+/g,' ').trim();
+   if(name)return name;
+  }
+ }
+ return '';
+}
+/* Balance visually measured line widths using only APIs available on Tizen 6.0. */
+function balancePlayerTitle(){
+ var el=document.getElementById('playingTitle');
+ if(!el||el._fullTitle==null)return;
+ // The overlay is display:none while hidden. Recalculate on the next showOverlay().
+ var available=el.clientWidth;
+ if(!available)return;
+ var s=window.getComputedStyle(el);
+ var font=[s.fontStyle,s.fontVariant,s.fontWeight,s.fontSize,s.fontFamily].join(' ');
+ var maxWidth=Math.max(1,available-(parseFloat(s.paddingLeft)||0)-(parseFloat(s.paddingRight)||0)-3);
+ if(el._balanceWidth===maxWidth&&el._balanceFont===font&&el._balanceSource===el._fullTitle)return;
+ el._balanceWidth=maxWidth;el._balanceFont=font;el._balanceSource=el._fullTitle;
+ var original=String(el._fullTitle);
+ el.textContent=original;
+ var cleaned=original.replace(/\s+/g,' ').trim();
+ if(!cleaned)return;
+ var words=cleaned.split(' '),n=words.length;
+ if(n<2)return;
+ var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+ if(!ctx)return;
+ ctx.font=font;
+ var widths=[],prefix=[0],space=ctx.measureText(' ').width;
+ for(var i=0;i<n;i++){
+  widths.push(ctx.measureText(words[i]).width);
+  if(widths[i]>maxWidth)return; // Preserve native break-word for oversized words.
+  prefix.push(prefix[i]+widths[i]);
+ }
+ function lineWidth(start,end){return prefix[end]-prefix[start]+(end-start-1)*space;}
+ var count=1,start=0;
+ for(var i=1;i<=n;i++){
+  if(lineWidth(start,i)>maxWidth){count++;start=i-1;}
+ }
+ if(count===1)return;
+ // Minimize width variance while keeping the minimal natural number of lines.
+ var target=(prefix[n]+(n-count)*space)/count;
+ var costs=[],previous=[];
+ for(var line=0;line<=count;line++){
+  costs[line]=[];previous[line]=[];
+  for(var j=0;j<=n;j++)costs[line][j]=Infinity;
+ }
+ costs[0][0]=0;
+ for(var line=1;line<=count;line++){
+  for(var from=line-1;from<n;from++){
+   if(!isFinite(costs[line-1][from]))continue;
+   for(var to=from+1;to<=n-(count-line);to++){
+    var width=lineWidth(from,to);
+    if(width>maxWidth)break;
+    var difference=width-target;
+    var score=costs[line-1][from]+difference*difference;
+    if(score<costs[line][to]){costs[line][to]=score;previous[line][to]=from;}
+   }
+  }
+ }
+ if(!isFinite(costs[count][n]))return;
+ var result=[],at=n;
+ for(var line=count;line>0;line--){
+  var from=previous[line][at];
+  if(from==null)return;
+  result.unshift(words.slice(from,at).join(' '));at=from;
+ }
+ el.textContent=result.join('\n');
+}
+function setPlayerTitle(ep,r){
+ // Keep the entire title and episode number in separate, centered elements.
+ var heading=document.getElementById('playingTitle');
+ heading._fullTitle=title(r);
+ heading._balanceWidth=null;
+ balancePlayerTitle();
+ document.getElementById('playerEpisodeNumber').textContent='серия '+(ep.ordinal||ep.number||'');
+ // Only the optional complete episode name appears in the lower player controls.
+ var name=document.getElementById('playerEpisodeName');
+ var episodeName=episodeNameForPlayer(ep);
+ name.textContent=episodeName;
+ name.hidden=!episodeName;
+}
 function play(ep,r,entryFocusId){current=r;window._lastEpisode=ep;skipRanges={opening:ep.opening||null,ending:ep.ending||null};seekPreview=null;clearTimeout(seekHoldTimer);seekHoldDirection=0;seekHoldActivated=false;seekStepSeconds=0;seekHoldPausedPlayback=false;++seekResumeGeneration;
 lastPlaybackPosition=null;lastPlaybackClock=0;completedThisPlayback=false;seekGraceUntil=Date.now()+2500;
 var u=urls(ep)[0];if(!u){msg('У серии нет распознанного HLS-адреса.');return;}if(u.indexOf('//')===0)u='https:'+u;
@@ -2073,7 +2164,7 @@ var u=urls(ep)[0];if(!u){msg('У серии нет распознанного HL
 playbackReturn={screen:screenName,releaseId:String(r.id!=null?r.id:r.alias),
  focusId:entryFocusId||episodeFocusId(ep,r),episodeFocus:episodeFocusId(ep,r)};
 cancelFocusScroll();
-activeEpisode=storeKey(r,ep);paused=false;lastSave=0;resumePending=false;resumeFailed=false;resumeTarget=0;resumeAttempts=0;resumeConfirmed=false;resumeSeekInFlight=false;resumeLastSeek=0;resumeLastError="";resumeStarted=Date.now();var playbackState=token&&ep.id?titleEpisodeRecord(r,ep,titleGroup(r)):null;if(playbackState&&!playbackState.watched&&playbackState.pos>5000){resumeTarget=playbackState.pos;resumePending=true;}player.hidden=false;document.body.classList.add("video-playing");playing=true;setOledPlaybackRunning(false);showOverlay();clearInterval(uiTicker);uiTicker=setInterval(updateProgress,1000);updateProgress();document.getElementById('playingTitle').textContent=title(r)+' · серия '+(ep.ordinal||ep.number||'');try{if(window.webapis&&webapis.avplay){webapis.avplay.open(u);setDiagnosticRect();webapis.avplay.setListener({onerror:function(e){stop();msg('Ошибка AVPlay: '+e);},onstreamcompleted:function(){markEpisodeWatched('avplay-complete');stop();},oncurrentplaytime:function(){if(resumePending)tryRestoreProgress();}});webapis.avplay.prepareAsync(function(){try{webapis.avplay.play();setOledPlaybackRunning(true);tryRestoreProgress();}catch(e){stop();msg('Ошибка запуска видео: '+e.message);}},function(e){stop();msg('Не удалось подготовить видео: '+e);});}else{video=document.createElement('video');video.src=u;video.autoplay=true;video.controls=true;video.style.cssText='width:100%;height:100%';document.getElementById('videoArea').appendChild(video);video.addEventListener('playing',function(){if(playing&&video)setOledPlaybackRunning(true);});video.addEventListener('pause',function(){if(playing&&video)setOledPlaybackRunning(false);});video.play();video.addEventListener('loadedmetadata',tryRestoreProgress);video.addEventListener('ended',function(){markEpisodeWatched('html5-ended');stop();});}}catch(e){stop();msg('Ошибка плеера: '+e.message);}}
+activeEpisode=storeKey(r,ep);paused=false;lastSave=0;resumePending=false;resumeFailed=false;resumeTarget=0;resumeAttempts=0;resumeConfirmed=false;resumeSeekInFlight=false;resumeLastSeek=0;resumeLastError="";resumeStarted=Date.now();var playbackState=token&&ep.id?titleEpisodeRecord(r,ep,titleGroup(r)):null;if(playbackState&&!playbackState.watched&&playbackState.pos>5000){resumeTarget=playbackState.pos;resumePending=true;}player.hidden=false;document.body.classList.add("video-playing");playing=true;setOledPlaybackRunning(false);showOverlay();clearInterval(uiTicker);uiTicker=setInterval(updateProgress,1000);updateProgress();setPlayerTitle(ep,r);try{if(window.webapis&&webapis.avplay){webapis.avplay.open(u);setDiagnosticRect();webapis.avplay.setListener({onerror:function(e){stop();msg('Ошибка AVPlay: '+e);},onstreamcompleted:function(){markEpisodeWatched('avplay-complete');stop();},oncurrentplaytime:function(){if(resumePending)tryRestoreProgress();}});webapis.avplay.prepareAsync(function(){try{webapis.avplay.play();setOledPlaybackRunning(true);tryRestoreProgress();}catch(e){stop();msg('Ошибка запуска видео: '+e.message);}},function(e){stop();msg('Не удалось подготовить видео: '+e);});}else{video=document.createElement('video');video.src=u;video.autoplay=true;video.controls=true;video.style.cssText='width:100%;height:100%';document.getElementById('videoArea').appendChild(video);video.addEventListener('playing',function(){if(playing&&video)setOledPlaybackRunning(true);});video.addEventListener('pause',function(){if(playing&&video)setOledPlaybackRunning(false);});video.play();video.addEventListener('loadedmetadata',tryRestoreProgress);video.addEventListener('ended',function(){markEpisodeWatched('html5-ended');stop();});}}catch(e){stop();msg('Ошибка плеера: '+e.message);}}
 function tryRestoreProgress(){
  if(!resumePending||!playing)return;
  try{
