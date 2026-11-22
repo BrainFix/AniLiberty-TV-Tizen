@@ -17,8 +17,8 @@ sources={
     "sync-icons/receiving.svg", "sync-icons/sending.svg", "sync-icons/synced.svg",
     "sync-icons/waiting.svg",
 }
-if version!="1.0.4":
-    raise SystemExit("Неверная версия: ожидается 1.0.4")
+if version!="1.0.5":
+    raise SystemExit("Неверная версия: ожидается 1.0.5")
 if xml.attrib.get("id")!="http://local.example/aniliberty7r4m9w":
     raise SystemExit("Неверный Widget ID")
 app=xml.find("{http://tizen.org/ns/widgets}application")
