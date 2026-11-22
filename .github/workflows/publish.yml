@@ -1,11 +1,6 @@
 name: Build and publish WGT
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - config.xml
-      - scripts/проверить.py
 permissions:
   contents: write
 jobs:
