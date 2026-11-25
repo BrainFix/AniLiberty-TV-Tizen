@@ -11,14 +11,14 @@ version=xml.attrib["version"]
 wgt=root/f"AniLiberty-TV-{version}.wgt"
 sources={
     "config.xml", "index.html", "app.js", "style.css",
-    "card-layout.css", "card-layout.js",
+    "card-layout.css", "card-layout.js", "service/preview-service.js",
     "icon.png", "poster.png", "title-placeholder.png", "episode-placeholder.png",
     "sync-icons/error.svg", "sync-icons/guest.svg", "sync-icons/partial.svg",
     "sync-icons/receiving.svg", "sync-icons/sending.svg", "sync-icons/synced.svg",
     "sync-icons/waiting.svg",
 }
-if version!="1.0.6":
-    raise SystemExit("Неверная версия: ожидается 1.0.5")
+if version!="1.0.7":
+    raise SystemExit("Неверная версия: ожидается 1.0.7")
 if xml.attrib.get("id")!="http://local.example/aniliberty7r4m9w":
     raise SystemExit("Неверный Widget ID")
 app=xml.find("{http://tizen.org/ns/widgets}application")

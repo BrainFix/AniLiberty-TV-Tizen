@@ -1539,7 +1539,7 @@ function wireAccountNavigation(){
   if(i+1<items.length)b.setAttribute('data-nav-down',focusId(items[i+1]));
  });
 }
-function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.5';}
+function appVersion(){try{if(window.tizen&&tizen.application){var info=tizen.application.getAppInfo();if(info&&info.version)return String(info.version);}}catch(e){}return '1.0.7';}
 
 
 function showAccount(preferredFocusId){
@@ -1577,7 +1577,7 @@ function showAccount(preferredFocusId){
  if(!target)target=Array.prototype.find.call(detail.querySelectorAll('button'),function(b){return focusId(b)===id;});
  focusAndReveal(target||document.getElementById('accountBtn'),true);
 }
-function latest(resetToFirst){var reset=resetToFirst===true;setScreen('catalog');msg('Загружаю новинки…');request('/anime/releases/latest?limit=49',function(data){if(screenName==='catalog')renderCatalog(data,reset);},function(e){if(screenName==='catalog')msg(e);});}
+function latest(resetToFirst){var reset=resetToFirst===true;setScreen('catalog');msg('Загружаю новинки…');request('/anime/releases/latest?limit=49',function(data){if(screenName==='catalog'&&!releaseLoading)renderCatalog(data,reset);else if(screenName==='catalog'&&releaseLoading)catalogSnapshot=data;},function(e){if(screenName==='catalog'&&!releaseLoading)msg(e);});}
 
 
 function franchiseLinks(payload,sourceId){
@@ -2481,6 +2481,58 @@ function key(e){var k=e.keyCode;
 
  }}
  document.addEventListener('focusin',function(e){if(e.target&&e.target.tagName==='BUTTON'&&!(actionDialog&&actionDialog.contains(e.target))&&!(descriptionDialog&&descriptionDialog.contains(e.target))){rememberFocus();if(!suppressFocusReveal)ensureFocusVisible(e.target);}});
+/* Smart Hub Preview: title deep links from Samsung's app-control PAYLOAD. */
+var lastPreviewReleaseId='',lastPreviewOpenAt=0;
+function previewPayloadReleaseId(){
+ try{
+  if(!window.tizen||!tizen.application)return '';
+  var request=tizen.application.getCurrentApplication().getRequestedAppControl();
+  var data=request&&request.appControl&&request.appControl.data;
+  if(!data||!data.length)return '';
+  for(var i=0;i<data.length;i++){
+   if(data[i].key!=='PAYLOAD'||!data[i].value||!data[i].value.length)continue;
+   var payload=data[i].value[0];
+   for(var j=0;j<3;j++){
+    if(typeof payload==='string')payload=JSON.parse(payload);
+    if(payload&&typeof payload==='object'&&payload.releaseId!=null){
+     var id=String(payload.releaseId);
+     return /^\d{1,12}$/.test(id)&&Number(id)>0?id:'';
+    }
+    if(payload&&typeof payload==='object'&&payload.values!=null)payload=payload.values;
+    else break;
+   }
+  }
+ }catch(e){logError('Smart Hub: вход',e);}
+ return '';
+}
+function acceptPreviewDeepLink(){
+ var id=previewPayloadReleaseId();if(!id)return;
+ var now=Date.now();if(id===lastPreviewReleaseId&&now-lastPreviewOpenAt<2000)return;
+ lastPreviewReleaseId=id;lastPreviewOpenAt=now;
+ if(loginInFlight)return;
+ if(playing)stop();
+ if(actionDialog)closeActionDialog();
+ if(descriptionDialog)closeDescriptionDialog();
+ if(loginDialog)closeLoginDialog();
+ if(screenName==='release'&&current&&String(current.id)===id&&!releaseLoading)return;
+ /* A preview does not need account login; the usual detail loader is reused. */
+ openRelease({id:Number(id)});
+}
+function initSmartHubPreview(){
+ window.addEventListener('appcontrol',function(){setTimeout(acceptPreviewDeepLink,0);});
+ /* Samsung may supply the initial payload before the appcontrol event listener exists. */
+ setTimeout(acceptPreviewDeepLink,0);
+ try{
+  if(!window.tizen||!tizen.systeminfo||!tizen.application||
+     !tizen.systeminfo.getCapability('http://tizen.org/feature/web.service'))return;
+  var key='al_tv_preview_seed_1_0_7';
+  if(localStorage.getItem(key)==='1')return;
+  var control=new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/pick');
+  tizen.application.launchAppControl(control,'anil7r4m9w.PreviewService',
+    function(){try{localStorage.setItem(key,'1');}catch(e){}},
+    function(error){logError('Smart Hub: служба',error);});
+ }catch(e){logError('Smart Hub: служба',e);}
+}
  document.getElementById('latest').onclick=latest;document.getElementById('continueBtn').onclick=showContinue;document.getElementById('historyBtn').onclick=showHistory;document.getElementById('favoritesBtn').onclick=showFavorites;document.getElementById('accountBtn').onclick=showAccount;document.getElementById('syncStatusControl').onclick=triggerSyncStatus;document.addEventListener('keydown',key);document.addEventListener('keyup',function(e){if(oledWakeKeyCode===e.keyCode){oledWakeKeyCode=null;e.preventDefault();return;}if((e.keyCode===38||e.keyCode===40)&&navHoldKey===e.keyCode)stopNavHold();if(e.keyCode===13&&releaseCardOK(e))return;if(playing&&(e.keyCode===37||e.keyCode===39))finishSeekPreview();});document.addEventListener('blur',function(){cancelCardOK();stopNavHold();});
  document.addEventListener('click',function(e){if(oledProtectorActive){hideOledProtector();e.preventDefault();e.stopPropagation();return;}scheduleOledIdle();},true);
  document.addEventListener('visibilitychange',function(){
@@ -2492,5 +2544,5 @@ function key(e){var k=e.keyCode;
   }
  });
  window.addEventListener('pagehide',function(){clearOledIdleTimer();setSamsungScreenSaver(true);});
- setSamsungScreenSaver(true);registerMediaKeys();if(!token)eraseLocalViewingData();try{localStorage.removeItem(CACHE_KEY);}catch(e){}beginStartupSync();focusWithoutBrowserScroll(document.getElementById('latest'));latest();updateIndicator();if(token){setTimeout(function(){startBackgroundHistory();},100);}
+ setSamsungScreenSaver(true);registerMediaKeys();if(!token)eraseLocalViewingData();try{localStorage.removeItem(CACHE_KEY);}catch(e){}beginStartupSync();focusWithoutBrowserScroll(document.getElementById('latest'));latest();initSmartHubPreview();updateIndicator();if(token){setTimeout(function(){startBackgroundHistory();},100);}
 })();

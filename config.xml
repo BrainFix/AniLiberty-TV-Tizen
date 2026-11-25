@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://local.example/aniliberty7r4m9w" version="1.0.6" viewmodes="maximized">
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://local.example/aniliberty7r4m9w" version="1.0.7" viewmodes="maximized">
   <name>AniLiberty TV</name><icon src="icon.png"/><content src="index.html"/><access origin="*" subdomains="true"/>
   <tizen:application id="anil7r4m9w.AniLibertyTV" package="anil7r4m9w" required_version="6.0"/>
   <tizen:profile name="tv-samsung"/>
   <tizen:privilege name="http://tizen.org/privilege/internet"/>
   <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+  <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+  <tizen:privilege name="http://tizen.org/privilege/filesystem.read"/>
+  <tizen:privilege name="http://tizen.org/privilege/filesystem.write"/>
+  <tizen:metadata key="http://samsung.com/tv/metadata/use.preview" value="bg_service"/>
+  <tizen:service id="anil7r4m9w.PreviewService" auto-restart="false">
+    <tizen:content src="service/preview-service.js"/>
+    <tizen:name>AniLiberty Preview</tizen:name>
+    <tizen:description>Smart Hub latest releases preview</tizen:description>
+    <tizen:category name="http://tizen.org/category/service"/>
+  </tizen:service>
+  <tizen:app-control>
+    <tizen:src name="index.html" reload="disable"/>
+    <tizen:operation name="http://samsung.com/appcontrol/operation/eden_resume"/>
+  </tizen:app-control>
   <tizen:setting pointing-device-support="disable"/>
 </widget>

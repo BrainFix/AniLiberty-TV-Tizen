@@ -9,6 +9,7 @@ ROOT=Path(__file__).resolve().parent.parent
 SOURCES=(
     "config.xml", "index.html", "app.js", "style.css",
     "card-layout.css", "card-layout.js",
+    "service/preview-service.js",
     "icon.png", "poster.png", "title-placeholder.png", "episode-placeholder.png",
     "sync-icons/error.svg", "sync-icons/guest.svg", "sync-icons/partial.svg",
     "sync-icons/receiving.svg", "sync-icons/sending.svg", "sync-icons/synced.svg",
